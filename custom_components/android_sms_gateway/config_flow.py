@@ -41,14 +41,20 @@ class InvalidAuth(Exception):
 
 
 async def _validate_input(hass: Any, data: dict[str, Any]) -> None:
-    """Check the gateway is reachable with the given credentials."""
+    """Check the gateway is reachable with the given credentials.
+
+    The app's /health endpoint isn't reliable in Local Server mode (returns
+    500 regardless of auth on some builds), so we check the auth-gated root
+    endpoint instead, which correctly returns 401 on bad credentials and 200
+    otherwise.
+    """
     session = async_get_clientsession(hass)
     auth = aiohttp.BasicAuth(data[CONF_USERNAME], data[CONF_PASSWORD])
     endpoint = data[CONF_URL].rstrip("/")
 
     try:
         async with session.get(
-            f"{endpoint}/health",
+            f"{endpoint}/",
             auth=auth,
             timeout=aiohttp.ClientTimeout(total=10),
         ) as response:

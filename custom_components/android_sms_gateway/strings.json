@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Connect to the Android SMS Gateway app running in Local Server mode.",
+        "data": {
+          "url": "Local server URL (e.g. http://192.168.1.12:8080)",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication"
+    },
+    "abort": {
+      "already_configured": "This device is already configured"
+    }
+  },
+  "services": {
+    "send_sms": {
+      "name": "Send SMS",
+      "description": "Send a text message via the Android SMS Gateway app.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "The text message to send."
+        },
+        "phone_number": {
+          "name": "Phone number",
+          "description": "Recipient phone number, in E.164 format."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+send_sms:
+  name: Send SMS
+  description: Send a text message via the Android SMS Gateway app.
+  fields:
+    message:
+      name: Message
+      description: The text message to send.
+      required: true
+      example: "Hello from Home Assistant!"
+      selector:
+        text:
+          multiline: true
+    phone_number:
+      name: Phone number
+      description: Recipient phone number, in E.164 format.
+      required: true
+      example: "+33612345678"
+      selector:
+        text:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 from typing import Any
 
 import aiohttp
@@ -17,7 +18,8 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from .const import DOMAIN
+from .api import AndroidSmsGatewayClient, AndroidSmsGatewayError
+from .const import CONF_WEBHOOK_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,20 +50,18 @@ async def _validate_input(hass: Any, data: dict[str, Any]) -> None:
     endpoint instead, which correctly returns 401 on bad credentials and 200
     otherwise.
     """
-    session = async_get_clientsession(hass)
-    auth = aiohttp.BasicAuth(data[CONF_USERNAME], data[CONF_PASSWORD])
-    endpoint = data[CONF_URL].rstrip("/")
-
+    client = AndroidSmsGatewayClient(
+        async_get_clientsession(hass),
+        data[CONF_URL],
+        data[CONF_USERNAME],
+        data[CONF_PASSWORD],
+    )
     try:
-        async with session.get(
-            f"{endpoint}/",
-            auth=auth,
-            timeout=aiohttp.ClientTimeout(total=10),
-        ) as response:
-            if response.status == 401:
-                raise InvalidAuth
-            if response.status >= 400:
-                raise CannotConnect
+        await client.async_check_auth()
+    except AndroidSmsGatewayError as err:
+        if str(err) == "invalid_auth":
+            raise InvalidAuth from err
+        raise CannotConnect from err
     except aiohttp.ClientError as err:
         raise CannotConnect from err
 
@@ -86,9 +86,11 @@ class AndroidSmsGatewayConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 await self.async_set_unique_id(user_input[CONF_URL])
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title="Android SMS Gateway", data=user_input
-                )
+                # Generated once per install and never displayed or logged —
+                # it's the secret path component of this entry's inbound
+                # webhook URL (see __init__.py's ping webhook registration).
+                data = {**user_input, CONF_WEBHOOK_ID: secrets.token_hex(16)}
+                return self.async_create_entry(title="Android SMS Gateway", data=data)
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors

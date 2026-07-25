@@ -18,6 +18,20 @@
       "already_configured": "This device is already configured"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Controls the system:ping-driven device health monitoring (Online/Battery entities). Sending SMS is unaffected by these options.",
+        "data": {
+          "monitoring_enabled": "Enable device health monitoring",
+          "url_mode": "Webhook URL"
+        },
+        "data_description": {
+          "url_mode": "internal: the direct LAN address (default, works for most installs). external: the public URL — only if the device can't reach Home Assistant's internal address. auto: internal if configured, else external. This choice isn't verified — an unreachable or auth-gated external URL will register successfully and then silently never deliver."
+        }
+      }
+    }
+  },
   "services": {
     "send_sms": {
       "name": "Send SMS",

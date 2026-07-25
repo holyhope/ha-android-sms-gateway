@@ -9,17 +9,33 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
+    SelectSelector,
+    SelectSelectorConfig,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
 
 from .api import AndroidSmsGatewayClient, AndroidSmsGatewayError
-from .const import CONF_WEBHOOK_ID, DOMAIN
+from .const import (
+    CONF_MONITORING_ENABLED,
+    CONF_URL_MODE,
+    CONF_WEBHOOK_ID,
+    DEFAULT_MONITORING_ENABLED,
+    DEFAULT_URL_MODE,
+    DOMAIN,
+    URL_MODES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,4 +110,51 @@ class AndroidSmsGatewayConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> AndroidSmsGatewayOptionsFlow:
+        """Get the options flow for this handler."""
+        return AndroidSmsGatewayOptionsFlow()
+
+
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_MONITORING_ENABLED, default=DEFAULT_MONITORING_ENABLED): (
+            BooleanSelector()
+        ),
+        vol.Required(CONF_URL_MODE, default=DEFAULT_URL_MODE): SelectSelector(
+            SelectSelectorConfig(options=URL_MODES)
+        ),
+    }
+)
+
+
+class AndroidSmsGatewayOptionsFlow(OptionsFlow):
+    """Handle options for Android SMS Gateway.
+
+    monitoring_enabled toggles the system:ping webhook + device entities
+    entirely. url_mode controls which Home Assistant URL is registered with
+    the gateway as the webhook target: internal (default — the device is
+    normally on the same LAN), external (needed if the device reaches Home
+    Assistant only through a public URL), or auto (internal if configured,
+    else external). No connectivity check is done on this choice — an
+    external URL that requires auth upstream (e.g. behind Teleport) will
+    still "successfully" register and then silently never deliver.
+    """
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, self.config_entry.options
+            ),
         )

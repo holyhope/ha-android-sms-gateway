@@ -26,10 +26,17 @@ from .api import AndroidSmsGatewayClient, AndroidSmsGatewayError
 from .const import (
     ATTR_MESSAGE,
     ATTR_PHONE_NUMBER,
+    CONF_MONITORING_ENABLED,
+    CONF_URL_MODE,
     CONF_WEBHOOK_ID,
+    DEFAULT_MONITORING_ENABLED,
+    DEFAULT_URL_MODE,
     DOMAIN,
     SERVICE_SEND_SMS,
     SIGNAL_PING_UPDATE,
+    URL_MODE_AUTO,
+    URL_MODE_EXTERNAL,
+    URL_MODE_INTERNAL,
     WEBHOOK_EVENT_PING,
     WEBHOOK_UNIQUE_PREFIX,
 )
@@ -61,6 +68,12 @@ SEND_SMS_SCHEMA = vol.Schema(
     }
 )
 
+_URL_MODE_KWARGS = {
+    URL_MODE_INTERNAL: {"allow_internal": True, "allow_external": False},
+    URL_MODE_EXTERNAL: {"allow_internal": False, "allow_external": True},
+    URL_MODE_AUTO: {"allow_internal": True, "allow_external": True},
+}
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Android SMS Gateway from a config entry."""
@@ -89,61 +102,89 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "client": client,
         "ping": ping_data,
+        "platforms": [],
     }
 
-    webhook_id = entry.data.get(CONF_WEBHOOK_ID)
-    if webhook_id is None:
-        # Entries created before this field existed don't have one yet —
-        # generate it now instead of requiring a remove/re-add.
-        webhook_id = secrets.token_hex(16)
-        hass.config_entries.async_update_entry(
-            entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
-        )
-
-    async def handle_ping_webhook(
-        hass: HomeAssistant, webhook_id: str, request: web.Request
-    ) -> None:
-        try:
-            payload = await request.json()
-        except ValueError:
-            _LOGGER.warning("Received non-JSON ping webhook payload")
-            return
-
-        health = payload.get("payload", {}).get("health", {})
-        checks = health.get("checks", {})
-        ping_data["last_ping"] = dt_util.utcnow()
-        ping_data["status"] = health.get("status")
-        battery = checks.get("battery:level", {}).get("observedValue")
-        if battery is not None:
-            ping_data["battery"] = battery
-
-        async_dispatcher_send(hass, SIGNAL_PING_UPDATE)
-
-    webhook.async_register(
-        hass, DOMAIN, "Android SMS Gateway Ping", webhook_id, handle_ping_webhook
+    monitoring_enabled = entry.options.get(
+        CONF_MONITORING_ENABLED, DEFAULT_MONITORING_ENABLED
     )
-    entry.async_on_unload(lambda: webhook.async_unregister(hass, webhook_id))
 
-    try:
-        # The device reaches Home Assistant over the LAN, never through the
-        # public Teleport-fronted external_url (which sits behind Teleport's
-        # own auth wall) — the same reason the `received` webhooks target
-        # the direct internal_url instead.
-        webhook_url = f"{get_url(hass, allow_internal=True, allow_external=False)}/api/webhook/{webhook_id}"
-        webhook_name = f"{WEBHOOK_UNIQUE_PREFIX}-{WEBHOOK_EVENT_PING.replace(':', '-')}"
-        await client.async_ensure_webhook(webhook_name, WEBHOOK_EVENT_PING, webhook_url)
-    except (AndroidSmsGatewayError, aiohttp.ClientError, NoURLAvailableError) as err:
-        _LOGGER.warning("Could not register ping webhook with SMS Gateway: %s", err)
+    if monitoring_enabled:
+        webhook_id = entry.data.get(CONF_WEBHOOK_ID)
+        if webhook_id is None:
+            # Entries created before this field existed don't have one yet —
+            # generate it now instead of requiring a remove/re-add.
+            webhook_id = secrets.token_hex(16)
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
+            )
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        async def handle_ping_webhook(
+            hass: HomeAssistant, webhook_id: str, request: web.Request
+        ) -> None:
+            try:
+                payload = await request.json()
+            except ValueError:
+                _LOGGER.warning("Received non-JSON ping webhook payload")
+                return
+
+            health = payload.get("payload", {}).get("health", {})
+            checks = health.get("checks", {})
+            ping_data["last_ping"] = dt_util.utcnow()
+            ping_data["status"] = health.get("status")
+            battery = checks.get("battery:level", {}).get("observedValue")
+            if battery is not None:
+                ping_data["battery"] = battery
+
+            async_dispatcher_send(hass, SIGNAL_PING_UPDATE)
+
+        webhook.async_register(
+            hass, DOMAIN, "Android SMS Gateway Ping", webhook_id, handle_ping_webhook
+        )
+        entry.async_on_unload(lambda: webhook.async_unregister(hass, webhook_id))
+
+        url_mode = entry.options.get(CONF_URL_MODE, DEFAULT_URL_MODE)
+        try:
+            # url_mode defaults to "internal": the device is normally on the
+            # same LAN, and Home Assistant's external_url here sits behind
+            # Teleport's own auth wall — a URL choice isn't verified to
+            # actually be reachable, so picking "external" without the
+            # gateway able to reach it will register successfully and then
+            # silently never deliver.
+            base_url = get_url(hass, **_URL_MODE_KWARGS[url_mode])
+            webhook_url = f"{base_url}/api/webhook/{webhook_id}"
+            webhook_name = (
+                f"{WEBHOOK_UNIQUE_PREFIX}-{WEBHOOK_EVENT_PING.replace(':', '-')}"
+            )
+            await client.async_ensure_webhook(
+                webhook_name, WEBHOOK_EVENT_PING, webhook_url
+            )
+        except (AndroidSmsGatewayError, aiohttp.ClientError, NoURLAvailableError) as err:
+            _LOGGER.warning("Could not register ping webhook with SMS Gateway: %s", err)
+
+        platforms = PLATFORMS
+        hass.data[DOMAIN][entry.entry_id]["platforms"] = platforms
+        await hass.config_entries.async_forward_entry_setups(entry, platforms)
+
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     return True
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the entry when its options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     hass.services.async_remove(DOMAIN, SERVICE_SEND_SMS)
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    platforms = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("platforms", [])
+    unload_ok = (
+        await hass.config_entries.async_unload_platforms(entry, platforms)
+        if platforms
+        else True
+    )
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok

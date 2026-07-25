@@ -19,7 +19,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.network import get_url
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util import dt as dt_util
 
 from .api import AndroidSmsGatewayClient, AndroidSmsGatewayError
@@ -125,10 +125,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(lambda: webhook.async_unregister(hass, webhook_id))
 
     try:
-        webhook_url = f"{get_url(hass, allow_internal=True, prefer_external=True)}/api/webhook/{webhook_id}"
+        # The device reaches Home Assistant over the LAN, never through the
+        # public Teleport-fronted external_url (which sits behind Teleport's
+        # own auth wall) — the same reason the `received` webhooks target
+        # the direct internal_url instead.
+        webhook_url = f"{get_url(hass, allow_internal=True, allow_external=False)}/api/webhook/{webhook_id}"
         webhook_name = f"{WEBHOOK_UNIQUE_PREFIX}-{WEBHOOK_EVENT_PING.replace(':', '-')}"
         await client.async_ensure_webhook(webhook_name, WEBHOOK_EVENT_PING, webhook_url)
-    except (AndroidSmsGatewayError, aiohttp.ClientError) as err:
+    except (AndroidSmsGatewayError, aiohttp.ClientError, NoURLAvailableError) as err:
         _LOGGER.warning("Could not register ping webhook with SMS Gateway: %s", err)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

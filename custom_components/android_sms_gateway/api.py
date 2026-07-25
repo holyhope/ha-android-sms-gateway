@@ -54,7 +54,11 @@ class AndroidSmsGatewayClient:
                 raise AndroidSmsGatewayError("cannot_connect")
 
     async def async_ensure_webhook(self, webhook_name: str, event: str, url: str) -> None:
-        """Register a device-side webhook if one with this name doesn't already exist."""
+        """Register a device-side webhook, replacing it if url/event drifted.
+
+        The API has no update endpoint (PUT returns 404) — a changed url or
+        event requires deleting the existing registration before recreating it.
+        """
         async with self._session.get(
             f"{self._endpoint}/webhooks",
             auth=self._auth,
@@ -66,8 +70,21 @@ class AndroidSmsGatewayClient:
                 )
             existing = await response.json()
 
-        if any(item.get("id") == webhook_name for item in existing):
-            return
+        match = next(
+            (item for item in existing if item.get("id") == webhook_name), None
+        )
+        if match is not None:
+            if match.get("url") == url and match.get("event") == event:
+                return
+            async with self._session.delete(
+                f"{self._endpoint}/webhooks/{webhook_name}",
+                auth=self._auth,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as response:
+                if response.status >= 400 and response.status != 404:
+                    raise AndroidSmsGatewayError(
+                        f"Failed to delete stale webhook: HTTP {response.status}"
+                    )
 
         async with self._session.post(
             f"{self._endpoint}/webhooks",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import aiohttp
 import voluptuous as vol
@@ -20,10 +21,26 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = []
 
+# The gateway's local API accepts any string as a phone number and returns
+# 202 Accepted regardless — malformed numbers only ever fail later, silently,
+# on the device. Reject obviously invalid input here instead of letting it
+# disappear into a message that will never send.
+E164_PATTERN = re.compile(r"^\+[1-9]\d{6,14}$")
+
+
+def _validate_phone_number(value: str) -> str:
+    value = cv.string(value)
+    if not E164_PATTERN.match(value):
+        raise vol.Invalid(
+            f"'{value}' is not a valid phone number in E.164 format (e.g. +33612345678)"
+        )
+    return value
+
+
 SEND_SMS_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_MESSAGE): cv.string,
-        vol.Required(ATTR_PHONE_NUMBER): cv.string,
+        vol.Required(ATTR_PHONE_NUMBER): _validate_phone_number,
     }
 )
 

@@ -43,7 +43,15 @@ DOMAIN_EVENT = f"{DOMAIN}_event"
 
 SIGNAL_PING_UPDATE = f"{DOMAIN}_ping_update"
 
-PING_STALE_AFTER = timedelta(minutes=15)
+# The "Online" binary_sensor's staleness threshold adapts to the observed gap
+# between real pings (PING_STALE_MULTIPLIER x the last observed interval)
+# instead of trusting the device's configured ping.interval_seconds, which
+# has been observed in practice to not actually govern the real cadence.
+# PING_DEFAULT_STALE_AFTER is the bootstrap value used until a second ping
+# has been received and a real interval can be computed.
+PING_DEFAULT_STALE_AFTER = timedelta(minutes=15)
+PING_MIN_STALE_AFTER = timedelta(minutes=2)
+PING_STALE_MULTIPLIER = 3
 
 CONF_EVENTS = "events"
 CONF_URL_MODE = "url_mode"

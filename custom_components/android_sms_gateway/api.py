@@ -53,6 +53,24 @@ class AndroidSmsGatewayClient:
             if response.status >= 400:
                 raise AndroidSmsGatewayError("cannot_connect")
 
+    async def async_get_settings(self) -> dict:
+        """Fetch the device's current /settings.
+
+        Doubles as a reachability probe independent of webhook delivery: a
+        successful response here while no ping has arrived means the device
+        is reachable but not delivering webhooks, not offline outright.
+        """
+        async with self._session.get(
+            f"{self._endpoint}/settings",
+            auth=self._auth,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as response:
+            if response.status >= 400:
+                raise AndroidSmsGatewayError(
+                    f"Failed to fetch settings: HTTP {response.status}"
+                )
+            return await response.json()
+
     async def async_list_webhooks(self) -> list[dict]:
         """List every webhook currently registered with the device."""
         async with self._session.get(

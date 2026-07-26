@@ -121,7 +121,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name="Android SMS Gateway",
     )
 
-    ping_data: dict[str, Any] = {"last_ping": None, "status": None, "battery": None}
+    ping_data: dict[str, Any] = {
+        "last_ping": None,
+        "status": None,
+        "battery": None,
+        "observed_interval": None,
+    }
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "client": client,
         "ping": ping_data,
@@ -154,7 +159,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if event == WEBHOOK_EVENT_PING:
                 health = payload.get("payload", {}).get("health", {})
                 checks = health.get("checks", {})
-                ping_data["last_ping"] = dt_util.utcnow()
+                now = dt_util.utcnow()
+                previous_ping = ping_data["last_ping"]
+                if previous_ping is not None:
+                    ping_data["observed_interval"] = now - previous_ping
+                ping_data["last_ping"] = now
                 ping_data["status"] = health.get("status")
                 battery = checks.get("battery:level", {}).get("observedValue")
                 if battery is not None:

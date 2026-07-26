@@ -11,7 +11,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -100,6 +100,7 @@ class AndroidSmsGatewayOnlineSensor(BinarySensorEntity):
             )
         )
 
+    @callback
     def _handle_ping(self) -> None:
         self._was_online = True
         self._warned_this_outage = False

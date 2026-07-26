@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
 from homeassistant.core import Event
 from homeassistant.helpers import device_registry as dr
@@ -28,7 +27,9 @@ DATA = {
 
 def _make_entry(hass, events=None):
     options = {} if events is None else {CONF_EVENTS: events}
-    entry = MockConfigEntry(domain=DOMAIN, unique_id=ENDPOINT, data=DATA, options=options)
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=ENDPOINT, data=DATA, options=options
+    )
     entry.add_to_hass(hass)
     return entry
 
@@ -53,9 +54,7 @@ async def test_setup_registers_webhook_for_each_selected_event(hass, aioclient_m
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    post_bodies = [
-        c[2] for c in aioclient_mock.mock_calls if c[0].lower() == "post"
-    ]
+    post_bodies = [c[2] for c in aioclient_mock.mock_calls if c[0].lower() == "post"]
     registered_events = {body["event"] for body in post_bodies}
     assert registered_events == {EVENT_SMS_RECEIVED, WEBHOOK_EVENT_PING}
     # Every registration must reuse the same inbound webhook URL/id.
@@ -77,11 +76,7 @@ async def test_setup_prunes_deselected_event_webhooks(hass, aioclient_mock):
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    deleted = [
-        c[1].path
-        for c in aioclient_mock.mock_calls
-        if c[0].lower() == "delete"
-    ]
+    deleted = [c[1].path for c in aioclient_mock.mock_calls if c[0].lower() == "delete"]
     # Only the deselected home-assistant-prefixed webhook is pruned — a
     # same-named-prefix-unrelated third-party webhook is left untouched.
     assert deleted == ["/webhooks/home-assistant-sms-sent"]
@@ -111,7 +106,9 @@ async def test_setup_sets_up_platforms_with_ping(hass, aioclient_mock):
     assert any(e.startswith("sensor.") for e in states)
 
 
-async def test_webhook_fires_bus_event_and_ignores_bad_json(hass, aioclient_mock, hass_client_no_auth):
+async def test_webhook_fires_bus_event_and_ignores_bad_json(
+    hass, aioclient_mock, hass_client_no_auth
+):
     aioclient_mock.get(f"{ENDPOINT}/webhooks", json=[])
     aioclient_mock.post(f"{ENDPOINT}/webhooks", status=201)
     entry = _make_entry(hass, events=[EVENT_SMS_RECEIVED])
@@ -144,7 +141,9 @@ async def test_webhook_fires_bus_event_and_ignores_bad_json(hass, aioclient_mock
     assert len(events) == 1
 
 
-async def test_ping_webhook_updates_ping_entities(hass, aioclient_mock, hass_client_no_auth):
+async def test_ping_webhook_updates_ping_entities(
+    hass, aioclient_mock, hass_client_no_auth
+):
     aioclient_mock.get(f"{ENDPOINT}/webhooks", json=[])
     aioclient_mock.post(f"{ENDPOINT}/webhooks", status=201)
     entry = _make_entry(hass, events=[WEBHOOK_EVENT_PING])

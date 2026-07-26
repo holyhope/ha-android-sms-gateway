@@ -9,7 +9,6 @@ device_trigger.py if you have more than one gateway configured.
 from __future__ import annotations
 
 import voluptuous as vol
-
 from homeassistant.const import CONF_DEVICE_ID, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import CALLBACK_TYPE, Event, HassJob, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv

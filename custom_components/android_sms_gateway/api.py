@@ -78,7 +78,9 @@ class AndroidSmsGatewayClient:
                     f"Failed to delete webhook: HTTP {response.status}"
                 )
 
-    async def async_ensure_webhook(self, webhook_name: str, event: str, url: str) -> None:
+    async def async_ensure_webhook(
+        self, webhook_name: str, event: str, url: str
+    ) -> None:
         """Register a device-side webhook, replacing it if url/event drifted.
 
         The API has no update endpoint (PUT returns 404) — a changed url or

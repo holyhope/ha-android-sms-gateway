@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-import pytest
 from homeassistant.const import CONF_DEVICE_ID, CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import Context, HomeAssistant
+from homeassistant.core import HomeAssistant
 
 from custom_components.android_sms_gateway import trigger
 from custom_components.android_sms_gateway.const import (

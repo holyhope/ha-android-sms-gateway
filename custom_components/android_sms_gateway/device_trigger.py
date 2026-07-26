@@ -8,7 +8,6 @@ platform trigger which fires for every configured gateway.
 from __future__ import annotations
 
 import voluptuous as vol
-
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant

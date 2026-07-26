@@ -10,7 +10,6 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 from aiohttp import web
-
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -23,7 +22,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.network import NoURLAvailableError, get_url
@@ -193,7 +193,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await client.async_ensure_webhook(
                     _webhook_name(event), event, webhook_url
                 )
-        except (AndroidSmsGatewayError, aiohttp.ClientError, NoURLAvailableError) as err:
+        except (
+            AndroidSmsGatewayError,
+            aiohttp.ClientError,
+            NoURLAvailableError,
+        ) as err:
             _LOGGER.warning("Could not register webhook(s) with SMS Gateway: %s", err)
 
         if WEBHOOK_EVENT_PING in events:

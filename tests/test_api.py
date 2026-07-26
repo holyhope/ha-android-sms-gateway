@@ -88,7 +88,9 @@ async def test_async_ensure_webhook_noop_when_unchanged(client, aioclient_mock):
 
     # The existing registration already matches url and event — no
     # post/delete calls should have been made.
-    assert not [c for c in aioclient_mock.mock_calls if c[0].lower() in ("post", "delete")]
+    assert not [
+        c for c in aioclient_mock.mock_calls if c[0].lower() in ("post", "delete")
+    ]
 
 
 async def test_async_ensure_webhook_replaces_when_drifted(client, aioclient_mock):
@@ -102,7 +104,9 @@ async def test_async_ensure_webhook_replaces_when_drifted(client, aioclient_mock
             }
         ],
     )
-    aioclient_mock.delete(f"{ENDPOINT}/webhooks/home-assistant-sms-received", status=200)
+    aioclient_mock.delete(
+        f"{ENDPOINT}/webhooks/home-assistant-sms-received", status=200
+    )
     aioclient_mock.post(f"{ENDPOINT}/webhooks", status=201)
 
     await client.async_ensure_webhook(

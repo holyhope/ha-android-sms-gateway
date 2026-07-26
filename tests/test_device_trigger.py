@@ -12,8 +12,8 @@ from custom_components.android_sms_gateway import device_trigger
 from custom_components.android_sms_gateway.const import (
     DOMAIN,
     DOMAIN_EVENT,
-    EVENT_TYPES,
     EVENT_SMS_RECEIVED,
+    EVENT_TYPES,
 )
 
 

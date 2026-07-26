@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResultType
@@ -87,9 +86,9 @@ async def test_user_flow_cannot_connect(hass):
 
 
 async def test_user_flow_aborts_on_duplicate_url(hass):
-    MockConfigEntry(domain=DOMAIN, unique_id=USER_INPUT[CONF_URL], data=USER_INPUT).add_to_hass(
-        hass
-    )
+    MockConfigEntry(
+        domain=DOMAIN, unique_id=USER_INPUT[CONF_URL], data=USER_INPUT
+    ).add_to_hass(hass)
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -121,7 +120,10 @@ async def test_options_flow_defaults(hass):
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        {CONF_EVENTS: [EVENT_SMS_RECEIVED, WEBHOOK_EVENT_PING], CONF_URL_MODE: URL_MODE_EXTERNAL},
+        {
+            CONF_EVENTS: [EVENT_SMS_RECEIVED, WEBHOOK_EVENT_PING],
+            CONF_URL_MODE: URL_MODE_EXTERNAL,
+        },
     )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY

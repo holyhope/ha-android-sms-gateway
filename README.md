@@ -11,6 +11,11 @@ network (Local Server mode) or the cloud.
 - Exposes an `android_sms_gateway.send_sms` action with a proper UI form
   (multiline message field, phone number field), usable directly from
   Developer Tools or in automations/scripts.
+- Native automation triggers for any android-sms-gateway event (SMS/MMS
+  received, delivery status, gateway ping, ...) — no manual webhook or
+  template condition required.
+- An "Online"/"Battery" device status, driven by the gateway's `system:ping`
+  event.
 
 ## Installation
 
@@ -36,6 +41,8 @@ Copy `custom_components/android_sms_gateway` into your Home Assistant
 
 ## Usage
 
+### Sending SMS
+
 Call the `android_sms_gateway.send_sms` action with a `message` and a
 `phone_number` (E.164 format), e.g.:
 
@@ -45,3 +52,30 @@ data:
   message: "Garage door left open"
   phone_number: "+33612345678"
 ```
+
+### Triggering automations on gateway events
+
+Open the integration's options (`Settings` → `Devices & Services` →
+`Android SMS Gateway` → **Configure**) and pick which events to subscribe
+to: `sms:received`, `sms:sent`, `sms:delivered`, `sms:failed`,
+`sms:data-received`, `mms:received`, `mms:downloaded`, `system:ping`.
+Each selected event registers a webhook with the gateway and becomes
+available as a trigger — either device-scoped (via the device's "Add
+Trigger" flow, useful with more than one gateway) or as a bare "Android SMS
+Gateway" platform trigger. Both give you the raw event payload:
+
+```yaml
+triggers:
+  - trigger: android_sms_gateway
+    type: sms:received
+conditions: []
+actions:
+  - action: notify.mobile_app_phone
+    data:
+      title: New SMS
+      message: >-
+        From: {{ trigger.payload.phoneNumber }}
+        {{ trigger.payload.message }}
+```
+
+`system:ping` also drives the "Online" and "Battery" device entities.

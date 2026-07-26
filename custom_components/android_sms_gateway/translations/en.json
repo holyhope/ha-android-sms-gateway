@@ -21,12 +21,13 @@
   "options": {
     "step": {
       "init": {
-        "description": "Controls the system:ping-driven device health monitoring (Online/Battery entities). Sending SMS is unaffected by these options.",
+        "description": "Sending SMS is unaffected by these options.",
         "data": {
-          "monitoring_enabled": "Enable device health monitoring",
+          "events": "Events",
           "url_mode": "Webhook URL"
         },
         "data_description": {
+          "events": "Which android-sms-gateway events to register a webhook for. Selected events become available as automation triggers. system:ping also drives the Online/Battery device entities.",
           "url_mode": "internal: the direct LAN address (default, works for most installs). external: the public URL — only if the device can't reach Home Assistant's internal address. auto: internal if configured, else external. This choice isn't verified — an unreachable or auth-gated external URL will register successfully and then silently never deliver."
         }
       }
@@ -46,6 +47,18 @@
           "description": "Recipient phone number, in E.164 format."
         }
       }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "sms:received": "SMS received",
+      "sms:sent": "SMS sent",
+      "sms:delivered": "SMS delivered",
+      "sms:failed": "SMS failed",
+      "sms:data-received": "Data SMS received",
+      "mms:received": "MMS received",
+      "mms:downloaded": "MMS downloaded",
+      "system:ping": "Gateway ping"
     }
   }
 }

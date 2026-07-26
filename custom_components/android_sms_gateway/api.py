@@ -53,12 +53,8 @@ class AndroidSmsGatewayClient:
             if response.status >= 400:
                 raise AndroidSmsGatewayError("cannot_connect")
 
-    async def async_ensure_webhook(self, webhook_name: str, event: str, url: str) -> None:
-        """Register a device-side webhook, replacing it if url/event drifted.
-
-        The API has no update endpoint (PUT returns 404) — a changed url or
-        event requires deleting the existing registration before recreating it.
-        """
+    async def async_list_webhooks(self) -> list[dict]:
+        """List every webhook currently registered with the device."""
         async with self._session.get(
             f"{self._endpoint}/webhooks",
             auth=self._auth,
@@ -68,7 +64,27 @@ class AndroidSmsGatewayClient:
                 raise AndroidSmsGatewayError(
                     f"Failed to list webhooks: HTTP {response.status}"
                 )
-            existing = await response.json()
+            return await response.json()
+
+    async def async_delete_webhook(self, webhook_name: str) -> None:
+        """Delete a device-side webhook registration by id."""
+        async with self._session.delete(
+            f"{self._endpoint}/webhooks/{webhook_name}",
+            auth=self._auth,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as response:
+            if response.status >= 400 and response.status != 404:
+                raise AndroidSmsGatewayError(
+                    f"Failed to delete webhook: HTTP {response.status}"
+                )
+
+    async def async_ensure_webhook(self, webhook_name: str, event: str, url: str) -> None:
+        """Register a device-side webhook, replacing it if url/event drifted.
+
+        The API has no update endpoint (PUT returns 404) — a changed url or
+        event requires deleting the existing registration before recreating it.
+        """
+        existing = await self.async_list_webhooks()
 
         match = next(
             (item for item in existing if item.get("id") == webhook_name), None
@@ -76,15 +92,7 @@ class AndroidSmsGatewayClient:
         if match is not None:
             if match.get("url") == url and match.get("event") == event:
                 return
-            async with self._session.delete(
-                f"{self._endpoint}/webhooks/{webhook_name}",
-                auth=self._auth,
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as response:
-                if response.status >= 400 and response.status != 404:
-                    raise AndroidSmsGatewayError(
-                        f"Failed to delete stale webhook: HTTP {response.status}"
-                    )
+            await self.async_delete_webhook(webhook_name)
 
         async with self._session.post(
             f"{self._endpoint}/webhooks",

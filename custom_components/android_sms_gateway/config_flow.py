@@ -18,7 +18,6 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
-    BooleanSelector,
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
@@ -28,12 +27,13 @@ from homeassistant.helpers.selector import (
 
 from .api import AndroidSmsGatewayClient, AndroidSmsGatewayError
 from .const import (
-    CONF_MONITORING_ENABLED,
+    CONF_EVENTS,
     CONF_URL_MODE,
     CONF_WEBHOOK_ID,
-    DEFAULT_MONITORING_ENABLED,
+    DEFAULT_EVENTS,
     DEFAULT_URL_MODE,
     DOMAIN,
+    EVENT_TYPES,
     URL_MODES,
 )
 
@@ -122,8 +122,8 @@ class AndroidSmsGatewayConfigFlow(ConfigFlow, domain=DOMAIN):
 
 OPTIONS_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_MONITORING_ENABLED, default=DEFAULT_MONITORING_ENABLED): (
-            BooleanSelector()
+        vol.Required(CONF_EVENTS, default=DEFAULT_EVENTS): SelectSelector(
+            SelectSelectorConfig(options=EVENT_TYPES, multiple=True)
         ),
         vol.Required(CONF_URL_MODE, default=DEFAULT_URL_MODE): SelectSelector(
             SelectSelectorConfig(options=URL_MODES)
@@ -135,14 +135,16 @@ OPTIONS_SCHEMA = vol.Schema(
 class AndroidSmsGatewayOptionsFlow(OptionsFlow):
     """Handle options for Android SMS Gateway.
 
-    monitoring_enabled toggles the system:ping webhook + device entities
-    entirely. url_mode controls which Home Assistant URL is registered with
-    the gateway as the webhook target: internal (default — the device is
-    normally on the same LAN), external (needed if the device reaches Home
-    Assistant only through a public URL), or auto (internal if configured,
-    else external). No connectivity check is done on this choice — an
-    external URL that requires auth upstream (e.g. behind Teleport) will
-    still "successfully" register and then silently never deliver.
+    events selects which android-sms-gateway events get a webhook registered
+    with the device and become available as triggers; system:ping also
+    drives the Online/Battery device entities. url_mode controls which Home
+    Assistant URL is registered with the gateway as the webhook target:
+    internal (default — the device is normally on the same LAN), external
+    (needed if the device reaches Home Assistant only through a public URL),
+    or auto (internal if configured, else external). No connectivity check
+    is done on this choice — an external URL that requires auth upstream
+    (e.g. behind Teleport) will still "successfully" register and then
+    silently never deliver.
     """
 
     async def async_step_init(

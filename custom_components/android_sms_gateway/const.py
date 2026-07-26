@@ -15,13 +15,37 @@ CONF_WEBHOOK_ID = "webhook_id"
 # webhook_id (the secret path component of the inbound HA URL) is generated
 # per config entry, not hardcoded here — see config_flow.py.
 WEBHOOK_UNIQUE_PREFIX = "home-assistant"
+
+# https://github.com/capcom6/android-sms-gateway#supported-events
+EVENT_SMS_RECEIVED = "sms:received"
+EVENT_SMS_SENT = "sms:sent"
+EVENT_SMS_DELIVERED = "sms:delivered"
+EVENT_SMS_FAILED = "sms:failed"
+EVENT_SMS_DATA_RECEIVED = "sms:data-received"
+EVENT_MMS_RECEIVED = "mms:received"
+EVENT_MMS_DOWNLOADED = "mms:downloaded"
 WEBHOOK_EVENT_PING = "system:ping"
+
+EVENT_TYPES = [
+    EVENT_SMS_RECEIVED,
+    EVENT_SMS_SENT,
+    EVENT_SMS_DELIVERED,
+    EVENT_SMS_FAILED,
+    EVENT_SMS_DATA_RECEIVED,
+    EVENT_MMS_RECEIVED,
+    EVENT_MMS_DOWNLOADED,
+    WEBHOOK_EVENT_PING,
+]
+
+# Event bus event type fired for every inbound gateway webhook, regardless of
+# which of EVENT_TYPES it carries — trigger.py filters by the "type" field.
+DOMAIN_EVENT = f"{DOMAIN}_event"
 
 SIGNAL_PING_UPDATE = f"{DOMAIN}_ping_update"
 
 PING_STALE_AFTER = timedelta(minutes=15)
 
-CONF_MONITORING_ENABLED = "monitoring_enabled"
+CONF_EVENTS = "events"
 CONF_URL_MODE = "url_mode"
 
 URL_MODE_AUTO = "auto"
@@ -29,5 +53,8 @@ URL_MODE_INTERNAL = "internal"
 URL_MODE_EXTERNAL = "external"
 URL_MODES = [URL_MODE_AUTO, URL_MODE_INTERNAL, URL_MODE_EXTERNAL]
 
-DEFAULT_MONITORING_ENABLED = True
+# Matches what this repo's Terraform sms-gateway module already registers by
+# default — sms:data-received (binary/machine SMS) and the other sms:*
+# delivery-status events are opt-in, not on by default.
+DEFAULT_EVENTS = [EVENT_SMS_RECEIVED, EVENT_MMS_RECEIVED, WEBHOOK_EVENT_PING]
 DEFAULT_URL_MODE = URL_MODE_INTERNAL

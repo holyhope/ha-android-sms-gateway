@@ -1,0 +1,22 @@
+# Describes the format for android_sms_gateway triggers
+_:
+  fields:
+    type:
+      required: true
+      example: "sms:received"
+      selector:
+        select:
+          options:
+            - "sms:received"
+            - "sms:sent"
+            - "sms:delivered"
+            - "sms:failed"
+            - "sms:data-received"
+            - "mms:received"
+            - "mms:downloaded"
+            - "system:ping"
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: android_sms_gateway

@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Connexion à l'application Android SMS Gateway en mode serveur local.",
+        "data": {
+          "url": "URL du serveur local (ex. http://192.168.1.12:8080)",
+          "username": "Nom d'utilisateur",
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion",
+      "invalid_auth": "Authentification invalide"
+    },
+    "abort": {
+      "already_configured": "Cet appareil est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "L'envoi de SMS n'est pas affecté par ces options.",
+        "data": {
+          "events": "Événements",
+          "url_mode": "URL du webhook"
+        },
+        "data_description": {
+          "events": "Les événements android-sms-gateway pour lesquels enregistrer un webhook. Les événements sélectionnés deviennent disponibles comme déclencheurs d'automatisation. system:ping alimente aussi les entités En ligne/Batterie de l'appareil.",
+          "url_mode": "internal : l'adresse LAN directe (par défaut, fonctionne pour la plupart des installations). external : l'URL publique — uniquement si l'appareil ne peut pas atteindre l'adresse interne de Home Assistant. auto : internal si configurée, sinon external. Ce choix n'est pas vérifié — une URL externe inaccessible ou protégée par authentification s'enregistrera avec succès puis ne délivrera jamais silencieusement."
+        }
+      }
+    }
+  },
+  "services": {
+    "send_sms": {
+      "name": "Envoyer un SMS",
+      "description": "Envoie un message texte via l'application Android SMS Gateway.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "Le message texte à envoyer."
+        },
+        "phone_number": {
+          "name": "Numéro de téléphone",
+          "description": "Numéro de téléphone du destinataire, au format E.164."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "sms:received": "SMS reçu",
+      "sms:sent": "SMS envoyé",
+      "sms:delivered": "SMS livré",
+      "sms:failed": "Échec du SMS",
+      "sms:data-received": "SMS de données reçu",
+      "mms:received": "MMS reçu",
+      "mms:downloaded": "MMS téléchargé",
+      "system:ping": "Ping de la passerelle"
+    }
+  }
+}
